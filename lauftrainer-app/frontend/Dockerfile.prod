@@ -1,0 +1,32 @@
+FROM node:20-slim AS builder
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm install
+
+COPY . .
+# NEXT_PUBLIC_*-Variablen werden von Next.js beim Build in die Client-Bundles
+# eingebacken (nicht erst zur Laufzeit gelesen) - daher als Build-Arg statt
+# nur als Runtime-env, sonst wuerde die im Browser ausgelieferte Datei immer
+# den zur Build-Zeit gueltigen Default sehen.
+ARG NEXT_PUBLIC_API_URL=""
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+RUN npm run build
+
+# Schlankes Runtime-Image: nur der von next.config.js:output=standalone
+# erzeugte minimale Server plus die separat kopierten statischen Assets
+# (werden vom Standalone-Output bewusst ausgespart, siehe Next.js-Doku) -
+# spart gegenueber `npm run dev`/vollem node_modules-Baum deutlich Groesse
+# und Startzeit.
+FROM node:20-slim AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+EXPOSE 3000
+CMD ["node", "server.js"]

@@ -1,0 +1,15 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+# Kein --reload (dev-only, siehe Dockerfile) und mehrere Worker-Prozesse
+# fuer echte Parallelitaet. --proxy-headers/--forwarded-allow-ips, da der
+# Container ausschliesslich hinter dem Caddy-Reverse-Proxy erreichbar ist
+# (docker-compose.prod.yml) - ohne das wuerde uvicorn Client-IP und
+# https-Schema aus den X-Forwarded-*-Headern ignorieren.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--proxy-headers", "--forwarded-allow-ips=*"]

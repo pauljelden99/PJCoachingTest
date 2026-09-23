@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Helles Theme (Default) - Werte als "r g b" fuer Tailwinds
+   rgb(var(...) / <alpha-value>)-Opacity-Syntax, siehe tailwind.config.ts */
+:root {
+  --color-ink: 31 39 35;
+  --color-paper: 245 247 245;
+  --color-surface: 255 255 255;
+  --color-moss: 47 111 166;
+  --color-clay: 193 101 27;
+  --color-mist: 107 117 112;
+  --color-danger: 197 48 48;
+}
+
+/* Dunkles Theme - aktiviert durch die Klasse "dark" auf <html>
+   (siehe lib/theme-context.tsx). Neutraltoene (ink/paper/surface/mist)
+   bewusst mit leichtem Blaustich (B-Kanal dominant). moss ist die
+   Hauptakzentfarbe (Buttons/Links/Fokusringe, siehe .btn-primary/
+   .link-action unten) - bewusst blau statt gruen, aber in einem anderen
+   Blauton als chart-theme.ts' "blue", damit z.B. Athletik- und GA1-Balken
+   in ZoneSummaryChart unterscheidbar bleiben. clay/danger unveraendert,
+   siehe Kommentar in tailwind.config.ts. */
+.dark {
+  --color-ink: 236 239 242;
+  --color-paper: 15 19 26;
+  --color-surface: 26 32 40;
+  --color-moss: 76 148 224;
+  --color-clay: 224 138 76;
+  --color-mist: 138 144 152;
+  --color-danger: 229 72 77;
+}
+
+body {
+  background-color: rgb(var(--color-paper));
+  color: rgb(var(--color-ink));
+  background-image: radial-gradient(circle at 12% -10%, rgb(var(--color-moss) / 0.07), transparent 45%),
+    radial-gradient(circle at 100% 0%, rgb(var(--color-clay) / 0.05), transparent 40%);
+  background-attachment: fixed;
+}
+
+/* Verhindert, dass ein einzelnes zu breites Element (z.B. eine Tabelle oder
+   ein Chart) auf dem Smartphone die gesamte Seite horizontal verschiebbar
+   macht - breite Inhalte scrollen stattdessen in ihrem eigenen Container
+   (overflow-x-auto, siehe z.B. components/DanielsZoneTable.tsx).
+   Bewusst "clip" statt "hidden": hidden macht das Element zu einem
+   Scroll-Container und wuerde damit die sticky positionierte Navigations-
+   leiste (components/Navbar.tsx) aushebeln, clip nicht. */
+html,
+body {
+  overflow-x: clip;
+}
+
+input,
+select,
+textarea {
+  color-scheme: light;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  color-scheme: dark;
+}
+
+/* Wiederverwendbare Bausteine - buendeln Muster, die vorher in fast jeder
+   Komponente als identischer literaler className-String dupliziert waren
+   (Formulare, Karten, Buttons). Eine Stelle aendern statt 18 Dateien. */
+@layer components {
+  /* Aeussere Seitenhuelle (<main>) - auf dem Smartphone bewusst schmalere
+     Raender als auf dem Desktop: 24px Innenabstand kosten auf einem 375px
+     breiten Geraet ueber 12% der nutzbaren Breite. Die maximale Breite
+     (max-w-4xl o.ae.) setzt weiterhin jede Seite selbst. */
+  .page {
+    @apply mx-auto w-full px-4 py-5 sm:px-6 sm:py-6;
+  }
+
+  .card {
+    @apply rounded-2xl border border-mist/15 bg-surface p-4 shadow-sm shadow-ink/[0.04] sm:p-5;
+  }
+
+  .label {
+    @apply mb-1 block text-xs font-medium text-mist;
+  }
+
+  /* text-base (16px) auf dem Smartphone, erst ab sm wieder text-sm: iOS
+     Safari zoomt beim Fokussieren automatisch in jedes Eingabefeld mit
+     weniger als 16px Schriftgroesse hinein und laesst die Seite danach
+     verschoben zurueck. min-h-[2.75rem] haelt die Touch-Flaeche auf der
+     ueblichen Mindestgroesse (44px). */
+  .input {
+    @apply w-full rounded-lg border border-mist/25 bg-paper px-3 py-2 text-base text-ink placeholder:text-mist/50
+      transition-shadow focus:border-moss focus:outline-none focus:ring-2 focus:ring-moss/25
+      max-sm:min-h-[2.75rem] sm:text-sm;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium
+      transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 max-sm:min-h-[2.75rem];
+  }
+
+  .btn-primary {
+    @apply btn bg-moss text-paper shadow-sm shadow-moss/30 hover:brightness-110 hover:shadow-md hover:shadow-moss/30
+      active:brightness-95;
+  }
+
+  .btn-outline {
+    @apply btn border border-mist/25 bg-transparent text-mist hover:border-moss hover:text-moss;
+  }
+
+  .btn-outline-danger {
+    @apply btn border border-mist/25 bg-transparent text-mist hover:border-danger hover:text-danger;
+  }
+
+  .link-action {
+    @apply text-moss transition-colors hover:underline;
+  }
+
+  .badge {
+    @apply rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+
+  .select-inline {
+    @apply rounded-lg border border-mist/20 bg-surface px-3 py-1.5 text-sm text-ink shadow-sm shadow-ink/[0.03]
+      transition-colors hover:border-moss/50 focus:border-moss focus:outline-none max-sm:min-h-[2.5rem]
+      max-sm:text-base;
+  }
+
+  .chip {
+    @apply rounded-full border border-mist/25 bg-transparent px-3 py-1 text-mist transition-colors
+      hover:border-moss/50 hover:text-ink;
+  }
+
+  .chip-active {
+    @apply chip border-moss bg-moss/10 text-moss;
+  }
+}

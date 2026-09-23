@@ -1,0 +1,15 @@
+.env
+.env.production
+__pycache__/
+*.pyc
+.venv/
+venv/
+node_modules/
+.next/
+# Statischer Export fuer GitHub Pages (siehe frontend/next.config.js,
+# .github/workflows/deploy-pages.yml) - wird bei jedem Deploy frisch gebaut,
+# nicht Teil des Repos.
+out/
+*.log
+.DS_Store
+*.tsbuildinfo

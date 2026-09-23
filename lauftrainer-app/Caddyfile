@@ -1,0 +1,27 @@
+# Reverse-Proxy-Konfiguration fuer den oeffentlichen Zugriff
+# (docker-compose.prod.yml) - ein einziger externer Port (80, spaeter 443)
+# vor Frontend und Backend, damit beide aus Browsersicht dieselbe Origin
+# teilen (kein CORS noetig, kein Mixed-Content). /api/* und /health gehen an
+# das FastAPI-Backend, alles andere an den Next.js-Produktionsserver.
+#
+# Ohne eigene Domain (noch keine vorhanden): laeuft so per HTTP direkt ueber
+# die Server-IP. Sobald eine Domain auf den Server zeigt, hier `:80` durch
+# die Domain ersetzen (z.B. "training.example.com") - Caddy holt dann
+# automatisch ein Let's-Encrypt-Zertifikat und leitet HTTP auf HTTPS um,
+# ohne dass sonst etwas an dieser Datei oder am Rest der Konfiguration
+# geaendert werden muss.
+:80 {
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	handle /health {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+
+	encode gzip
+}

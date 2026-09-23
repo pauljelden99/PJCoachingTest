@@ -1,0 +1,113 @@
+# Produktions-Stack fuer den oeffentlichen Betrieb - Unterschiede zu
+# docker-compose.yml (lokale Entwicklung):
+# - api/worker/web bauen aus den *.prod-Dockerfiles (kein --reload, kein
+#   `next dev`, siehe backend/Dockerfile.prod und frontend/Dockerfile.prod)
+#   und mounten den Quellcode NICHT als Volume - das Image enthaelt den zum
+#   Build-Zeitpunkt aktuellen Code, Aenderungen erfordern ein
+#   `docker compose build`.
+# - db/redis veroeffentlichen keine Ports mehr auf dem Host - beide sind nur
+#   innerhalb des Compose-Netzwerks fuer api/worker erreichbar, nicht mehr
+#   aus dem Internet.
+# - ein neuer `caddy`-Dienst ist der einzige von aussen erreichbare Port
+#   (80/443) und reicht Anfragen laut Caddyfile an api/web weiter (siehe
+#   dort) - api/web selbst veroeffentlichen dafuer keine Host-Ports mehr.
+# - alle Dienste laufen mit `restart: unless-stopped`, damit sie einen
+#   Server-Neustart oder Absturz automatisch ueberstehen.
+#
+# Nutzung: .env.production nach den Vorgaben in .env.production.example
+# befuellen (starke SECRET_KEY/DB-Passwoerter generieren, siehe dortige
+# Kommentare), dann:
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+#   docker compose --env-file .env.production -f docker-compose.prod.yml run --rm api alembic upgrade head
+#
+# Wichtig: IMMER mit `--env-file .env.production` aufrufen, nicht nur mit
+# `-f docker-compose.prod.yml` - `env_file:` unten spielt .env.production
+# zwar in die jeweiligen Container ein, wird von Compose selbst aber NICHT
+# fuer die eigenen ${...}-Platzhalter in dieser Datei (z.B. POSTGRES_PASSWORD
+# im healthcheck/environment-Block unten) gelesen. Ohne --env-file bleiben
+# diese Platzhalter leer.
+services:
+  db:
+    image: timescale/timescaledb:latest-pg16
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lauftrainer}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-lauftrainer}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lauftrainer}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    restart: unless-stopped
+    env_file: .env.production
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    command: celery -A app.worker worker --loglevel=info
+    restart: unless-stopped
+    env_file: .env.production
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        # Wird beim Build in die Client-Bundles eingebacken (siehe
+        # frontend/Dockerfile.prod) - leer = same-origin ("/api/..."), da
+        # Caddy Frontend und Backend unter derselben Origin zusammenfuehrt
+        # (siehe Caddyfile) und damit CORS/Mixed-Content von vornherein
+        # entfaellt.
+        NEXT_PUBLIC_API_URL: ""
+    restart: unless-stopped
+    env_file: .env.production
+    depends_on:
+      - api
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - web
+
+volumes:
+  db_data:
+  caddy_data:
+  caddy_config:
