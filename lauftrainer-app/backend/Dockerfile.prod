@@ -12,8 +12,7 @@ COPY . .
 # Container ausschliesslich hinter dem Caddy-Reverse-Proxy erreichbar ist
 # (docker-compose.prod.yml) - ohne das wuerde uvicorn Client-IP und
 # https-Schema aus den X-Forwarded-*-Headern ignorieren.
-# ${PORT:-8000} statt eines festen Ports: Hosting-Plattformen wie Railway
-# weisen den Port dynamisch ueber die PORT-Env-Var zu, docker-compose.prod.yml
-# setzt sie nicht und faellt daher auf 8000 zurueck. Braucht die Shell-Form
+# ${PORT:-8000} statt eines festen Ports: docker-compose.prod.yml setzt die
+# PORT-Env-Var nicht und faellt daher auf 8000 zurueck. Braucht die Shell-Form
 # (kein exec-Array), da nur diese Env-Var-Expansion durchfuehrt.
 CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2 --proxy-headers --forwarded-allow-ips=*

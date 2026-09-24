@@ -137,8 +137,8 @@ GitHub Pages liefert ausschliesslich statische Dateien aus - kein
 Node-Server, keine Datenbank. Fuer einen unverbindlichen Test-Link lässt
 sich daher nur das **Frontend** dort veroeffentlichen; das Backend
 (FastAPI + PostgreSQL + Redis) braucht weiterhin einen echten Server oder
-einen Hosting-Dienst mit Python-Laufzeit (z.B. Render, Fly.io, Railway,
-oder der eigene Server aus dem Abschnitt oben).
+einen Hosting-Dienst mit Python-Laufzeit (z.B. Render, Fly.io, oder der
+eigene Server aus dem Abschnitt oben).
 
 1. **Backend separat hosten** und dabei sicherstellen, dass es von
    ausserhalb erreichbar ist (eigene URL, z.B. `https://api.eure-domain.tld`
