@@ -29,7 +29,9 @@ Berechnungs-Engine erreichen - siehe `app/services/normalizer.py`.
 ```
 lauftrainer-app/
 ├── docker-compose.yml          Gesamte Dev-Umgebung (DB, Redis, API, Worker, Web)
+├── docker-compose.prod.yml     Produktiv-Stack (siehe "Produktivbetrieb" unten)
 ├── .env.example                Vorlage fuer Umgebungsvariablen
+├── deploy/setup-server.sh      Einmaliges VPS-Setup (Docker + Firewall)
 │
 ├── backend/
 │   ├── requirements.txt
@@ -101,9 +103,14 @@ stattdessen `docker-compose.prod.yml`:
   reicht Anfragen laut `Caddyfile` an `api`/`web` weiter - Frontend und
   Backend teilen sich dadurch dieselbe Origin (kein CORS noetig).
 
-Deployment auf einem eigenen Server:
+Deployment auf einem eigenen Server (z.B. Strato VPS/Cloud Server, oder
+jeder andere Linux-VPS mit Docker - der Ablauf ist ueberall identisch):
 
 ```bash
+# Einmalig auf einem frischen VPS: Docker installieren + Firewall
+# einrichten (nur SSH/80/443 nach aussen)
+bash deploy/setup-server.sh
+
 cp .env.production.example .env.production
 # .env.production ausfuellen - insbesondere SECRET_KEY und
 # POSTGRES_PASSWORD mit z.B. `openssl rand -hex 32` erzeugen, FRONTEND_ORIGIN
@@ -255,11 +262,12 @@ geschwindigkeit von ATL vs. CTL bei einer Belastungsspitze).
     (Herzfrequenz, Trainingswerte) - das ist eine besondere Kategorie
     personenbezogener Daten nach Art. 9 DSGVO, im Zweifel juristisch
     pruefen lassen statt den Platzhaltertext nur zu ergaenzen.
-- [ ] **Server besorgen und Domain einrichten** (siehe Abschnitt
-  "Produktivbetrieb" oben) - DNS-A-Record der Domain auf die Server-IP
-  zeigen lassen, danach `FRONTEND_ORIGIN` in `.env.production` sowie die
-  Adresse in `Caddyfile` von `:80` auf die Domain umstellen, damit Caddy
-  automatisch HTTPS (Let's Encrypt) einrichtet.
+- [ ] **VPS bestellen und Domain einrichten** (z.B. Strato VPS/Cloud
+  Server, siehe Abschnitt "Produktivbetrieb" oben) - DNS-A-Record der
+  Domain (z.B. im Strato-Kundenmenue) auf die Server-IP zeigen lassen,
+  danach `FRONTEND_ORIGIN` in `.env.production` sowie die Adresse in
+  `Caddyfile` von `:80` auf die Domain umstellen, damit Caddy automatisch
+  HTTPS (Let's Encrypt) einrichtet.
 - [ ] **`.env.production` mit echten Secrets befuellen** - `SECRET_KEY` und
   `POSTGRES_PASSWORD` per `openssl rand -hex 32` erzeugen (siehe Kommentare
   in `.env.production.example`), niemals die Beispielwerte uebernehmen.
@@ -270,10 +278,11 @@ geschwindigkeit von ATL vs. CTL bei einer Belastungsspitze).
 - [ ] **Ersten Admin-Account anlegen** per CLI (`python -m app.create_admin`,
   Befehl siehe Abschnitt "Multi-User..." unten) und danach ueber `/admin`
   Trainer-/Athletenkonten anlegen.
-- [ ] **Firewall konfigurieren** - nur Port 80/443 (Caddy) und 22 (SSH) nach
-  aussen freigeben; `docker-compose.prod.yml` veroeffentlicht DB/Redis zwar
-  bereits nicht mehr auf dem Host, eine zusaetzliche Firewall-Regel schuetzt
-  aber auch gegen Fehlkonfigurationen.
+- [ ] **Firewall konfigurieren** - erledigt `deploy/setup-server.sh`
+  (nur Port 80/443 fuer Caddy und 22 fuer SSH nach aussen offen);
+  `docker-compose.prod.yml` veroeffentlicht DB/Redis zwar bereits nicht
+  mehr auf dem Host, die Firewall schuetzt aber zusaetzlich gegen
+  Fehlkonfigurationen.
 - [ ] **Deployment einmal durchspielen** (`docker compose --env-file
   .env.production -f docker-compose.prod.yml up -d --build`, Migration
   ausfuehren, `/health` sowie `/dashboard` unter der oeffentlichen Adresse
